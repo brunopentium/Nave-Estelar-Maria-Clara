@@ -124,6 +124,11 @@ body.on #dock{transform:none}
 @keyframes rocketFloat{50%{transform:translateY(-8px) rotate(-6deg)}}
 .go-txt{font-weight:800;font-size:clamp(20px,5.6vw,30px);letter-spacing:.04em;text-shadow:0 3px 10px rgba(0,0,0,.6);animation:blink 1.4s ease-in-out infinite}
 @keyframes blink{50%{opacity:.55}}
+.install{display:flex;flex-direction:column;align-items:center;gap:6px;max-width:min(92vw,420px);padding:12px 16px;border-radius:20px;background:rgba(255,255,255,.1);border:1.5px solid rgba(255,255,255,.25);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);text-align:center}
+.install[hidden]{display:none}
+#installBtn{padding:12px 22px;border-radius:99px;font-size:18px;font-weight:800;background:linear-gradient(160deg,#4be89a,#13a660);box-shadow:0 5px 0 #0a6b3d,0 10px 20px rgba(0,0,0,.35)}
+#installBtn[hidden]{display:none}
+#installHint{font-size:13.5px;font-weight:600;color:#dbe4ff;line-height:1.35}
 .adult-note{position:absolute;bottom:calc(var(--sab) + 12px);left:16px;right:16px;text-align:center;font-size:12.5px;font-weight:600;color:#b9c6ff;line-height:1.35}
 .adult-note b{color:#fff}
 
@@ -195,7 +200,8 @@ body.on #dock{transform:none}
   <div class="logo"><span class="t1">NAVE ESTELAR</span><span class="t2">da Maria Clara ✨</span></div>
   <button id="play" aria-label="Começar"><span>🚀</span></button>
   <div class="go-txt">TOQUE PARA COMEÇAR</div>
-  <div class="adult-note">🔒 Para sair: <b>segure o cadeado</b> no canto da tela e digite a senha.<span id="iosNote"></span></div>
+  <div class="install" id="installBox" hidden><button id="installBtn" hidden>📲 Instalar como app</button><div id="installHint"></div></div>
+  <div class="adult-note">🔒 Para sair: <b>segure o cadeado</b> no canto da tela e digite a senha.</div>
 </div>
 
 <div id="map" class="ov">
@@ -860,8 +866,11 @@ const fsOK=!!(document.fullscreenEnabled||document.webkitFullscreenEnabled);
 function requestFS(){const el=document.documentElement,f=el.requestFullscreen||el.webkitRequestFullscreen;if(!f||fsEl())return;try{const r=f.call(el,{navigationUI:'hide'});if(r&&r.catch)r.catch(()=>{})}catch(e){}}
 function exitFS(){const f=document.exitFullscreen||document.webkitExitFullscreen;if(f&&fsEl()){try{const r=f.call(document);if(r&&r.catch)r.catch(()=>{})}catch(e){}}}
 let wl=null;async function wake(){try{if('wakeLock' in navigator)wl=await navigator.wakeLock.request('screen')}catch(e){}}
-function enterKid(){st.kid=true;requestFS();wake();try{history.pushState({mc:1},'',location.href);history.pushState({mc:2},'',location.href)}catch(e){}}
-window.addEventListener('popstate',()=>{if(st.kid){try{history.pushState({mc:3},'',location.href)}catch(e){}}});
+let hDepth=0;
+function armHistory(){if(!st.kid)return;try{while(hDepth<4){history.pushState({mc:hDepth},'',location.href);hDepth++}}catch(e){}}
+function enterKid(){st.kid=true;if(!isStandalone())requestFS();wake();armHistory()}
+window.addEventListener('popstate',()=>{if(st.kid){hDepth=Math.max(0,hDepth-1);armHistory()}});
+document.addEventListener('pointerdown',armHistory,true);
 window.addEventListener('beforeunload',e=>{if(st.kid){e.preventDefault();e.returnValue=''}});
 function onFsChange(){if(st.kid&&fsOK&&!isStandalone()&&!fsEl()&&!$('#adult').classList.contains('show')&&!$('#pad').classList.contains('show'))$('#resume').classList.add('show')}
 document.addEventListener('fullscreenchange',onFsChange);document.addEventListener('webkitfullscreenchange',onFsChange);
@@ -893,11 +902,20 @@ $('#aBack').addEventListener('click',()=>{$('#adult').classList.remove('show');i
 $('#aSound').addEventListener('click',()=>{st.sound=!st.sound;if(!st.sound){musicStop();try{speechSynthesis.cancel()}catch(e){}if(AC)AC.suspend()}else if(AC)AC.resume();openAdult()});
 $('#aVoice').addEventListener('click',()=>{st.voice=!st.voice;if(!st.voice)try{speechSynthesis.cancel()}catch(e){}openAdult()});
 $('#aReset').addEventListener('click',e=>{const b=e.currentTarget;if(!b.dataset.c){b.dataset.c='1';b.textContent='Toque de novo para confirmar';return}save.stars=0;save.visited={};save.pal=0;persist();st.level=1;updHUD();openAdult()});
-$('#aExit').addEventListener('click',()=>{st.kid=false;$('#adult').classList.remove('show');if(st.music)toggleMusic(true);musicStop();try{speechSynthesis.cancel()}catch(e){}try{wl&&wl.release()}catch(e){}exitFS();$('#bye').classList.add('show')});
+$('#aExit').addEventListener('click',()=>{st.kid=false;$('#adult').classList.remove('show');if(st.music)toggleMusic(true);musicStop();try{speechSynthesis.cancel()}catch(e){}try{wl&&wl.release()}catch(e){}exitFS();$('#bye').classList.add('show');if(isStandalone())setTimeout(()=>{try{window.close()}catch(e){}},600)});
 $('#againBtn').addEventListener('click',()=>{$('#bye').classList.remove('show');enterKid();msg('Oba! Vamos brincar mais!',WORLDS[st.world].face)});
 
 /* ================= início ================= */
-if(isIOS&&!isStandalone())$('#iosNote').innerHTML='<br>📱 No iPhone: toque em <b>Compartilhar</b> → <b>Adicionar à Tela de Início</b> para jogar em tela cheia.';
+let deferredInstall=null;
+function showInstall(){if(isStandalone()||st.started)return;const box=$('#installBox'),btn=$('#installBtn'),hint=$('#installHint');box.hidden=false;
+  if(deferredInstall){btn.hidden=false;hint.innerHTML='Instale para abrir direto em tela cheia, sem barra do navegador.'}
+  else if(isIOS){btn.hidden=true;hint.innerHTML='📱 <b>Instalar no iPhone:</b> toque em <b>Compartilhar</b> ⬆️ e depois em <b>Adicionar à Tela de Início</b>.'}
+  else{btn.hidden=true;hint.innerHTML='📲 <b>Instalar como app:</b> no menu <b>⋮</b> do navegador, toque em <b>Instalar app</b> ou <b>Adicionar à tela inicial</b>.'}}
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredInstall=e;showInstall()});
+window.addEventListener('appinstalled',()=>{deferredInstall=null;$('#installBtn').hidden=true;$('#installHint').innerHTML='✅ Instalado! Agora abra pelo ícone 🚀 na tela inicial.'});
+$('#installBox').addEventListener('click',e=>e.stopPropagation());
+$('#installBtn').addEventListener('click',async e=>{e.stopPropagation();if(!deferredInstall)return;try{deferredInstall.prompt();const r=await deferredInstall.userChoice;if(r.outcome==='accepted'){$('#installBtn').hidden=true;$('#installHint').innerHTML='✅ Instalado! Agora abra pelo ícone 🚀 na tela inicial.'}}catch(err){}deferredInstall=null});
+setTimeout(showInstall,2500);
 function start(){if(st.started)return;st.started=true;ac();sfx.fanfare();enterKid();document.body.classList.add('on');$('#start').classList.add('hide');setTimeout(()=>$('#start').classList.remove('show'),700);
   say('Vamos lá, Maria Clara!');requestAnimationFrame(()=>{layout();enterWorld(st.world);st.hintUntil=st.t+14;st.lastInput=st.t})}
 $('#start').addEventListener('click',start);
