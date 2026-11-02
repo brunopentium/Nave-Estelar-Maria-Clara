@@ -1,5 +1,12 @@
 # 🚀 Nave Estelar da Maria Clara
 
+| Versão | Link |
+|---|---|
+| **Nave Estelar 2 (3D)** | https://brunopentium.github.io/Nave-Estelar-Maria-Clara/v2/ |
+| Clássica (2D) | https://brunopentium.github.io/Nave-Estelar-Maria-Clara/ |
+
+A versão 2 foi refeita em 3D (WebGL / Three.js): iluminação realista, reflexos, sombras, brilho cinematográfico, personagens e cenários 3D, câmera em movimento e efeitos de partículas. O código-fonte fica em `v2/src/` e é empacotado em `v2/game.js`.
+
 Jogo espacial em tela cheia para crianças pequenas (3 anos+). Abra no celular, toque em **COMEÇAR** e brinque.
 
 ## O que tem

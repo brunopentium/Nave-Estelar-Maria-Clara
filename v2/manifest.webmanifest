@@ -1,0 +1,19 @@
+{
+  "name": "Nave Estelar 2 da Maria Clara",
+  "short_name": "Nave Estelar 2",
+  "description": "Aventura espacial em 3D para criancas pequenas.",
+  "start_url": "./",
+  "scope": "./",
+  "id": "./",
+  "display": "fullscreen",
+  "orientation": "any",
+  "background_color": "#050818",
+  "theme_color": "#050818",
+  "lang": "pt-BR",
+  "icons": [
+    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"},
+    {"src": "icon.svg", "sizes": "any", "type": "image/svg+xml"}
+  ]
+}
