@@ -15,6 +15,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&display=swap" rel="stylesheet">
 <title>Nave Estelar da Maria Clara</title>
+<script src="voz/voz.js"></script>
 <style>
 :root{--f:'Baloo 2',ui-rounded,'SF Pro Rounded','Arial Rounded MT Bold',system-ui,sans-serif;--glass:rgba(12,16,52,.55);--edge:rgba(255,255,255,.22);--sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px);--sal:env(safe-area-inset-left,0px);--sar:env(safe-area-inset-right,0px)}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
@@ -657,7 +658,10 @@ function musicStop(){if(seqT){clearInterval(seqT);seqT=null}}
 let ptVoice=null;
 function loadVoices(){try{const v=speechSynthesis.getVoices();ptVoice=v.find(x=>/pt[-_]BR/i.test(x.lang)&&/female|luciana|francisca|vitoria|google/i.test(x.name))||v.find(x=>/pt[-_]BR/i.test(x.lang))||v.find(x=>/^pt/i.test(x.lang))||null}catch(e){}}
 if('speechSynthesis' in window){loadVoices();speechSynthesis.onvoiceschanged=loadVoices}
-function say(text){if(!st.voice||!st.sound||!('speechSynthesis' in window))return;try{speechSynthesis.cancel();const clean=text.replace(/\p{Extended_Pictographic}|️/gu,'').trim();if(!clean)return;const u=new SpeechSynthesisUtterance(clean);u.lang='pt-BR';u.rate=.98;u.pitch=1.25;u.volume=1;if(ptVoice)u.voice=ptVoice;speechSynthesis.speak(u)}catch(e){}}
+function say(text){if(!st.voice||!st.sound)return;const NV=window.NaveVoz;if(NV&&NV.say(text,d=>{st.talkUntil=st.t+d+.1})){try{speechSynthesis.cancel()}catch(e){}return}ttsSay(text)}
+if(window.NaveVoz)NaveVoz.fallback=t=>ttsSay(t);
+function hushAll(){try{speechSynthesis.cancel()}catch(e){}if(window.NaveVoz)NaveVoz.hush()}
+function ttsSay(text){if(!st.voice||!st.sound||!('speechSynthesis' in window))return;try{speechSynthesis.cancel();const clean=text.replace(/\p{Extended_Pictographic}|️/gu,'').trim();if(!clean)return;const u=new SpeechSynthesisUtterance(clean);u.lang='pt-BR';u.rate=.98;u.pitch=1.25;u.volume=1;if(ptVoice)u.voice=ptVoice;speechSynthesis.speak(u)}catch(e){}}
 let msgTm=0;
 function msg(text,face,o={}){const b=$('#bub');$('#bubFace').textContent=face||'💬';$('#bubT').textContent=text;const sw=$('#bubSw');if(o.sw){sw.style.background=o.sw;sw.hidden=false}else sw.hidden=true;b.classList.remove('pop','dim');void b.offsetWidth;b.classList.add('pop','show');clearTimeout(msgTm);msgTm=setTimeout(()=>b.classList.add('dim'),Math.max(4500,text.length*90));st.talkWho=o.who||(face===WORLDS[st.world].face?'friend':'other');st.talkUntil=st.t+clamp(text.length*.065,1,6);say(text)}
 function card(title,sub,icon,small){const c=$('#card');c.querySelector('.ci').textContent=icon||'';c.querySelector('.ct').textContent=title;c.querySelector('.cs').textContent=sub||'';c.classList.toggle('small',!!small);c.classList.remove('show');void c.offsetWidth;c.classList.add('show')}
@@ -876,7 +880,7 @@ window.addEventListener('beforeunload',e=>{if(st.kid){e.preventDefault();e.retur
 function onFsChange(){if(st.kid&&fsOK&&!isStandalone()&&!fsEl()&&!$('#adult').classList.contains('show')&&!$('#pad').classList.contains('show'))$('#resume').classList.add('show')}
 document.addEventListener('fullscreenchange',onFsChange);document.addEventListener('webkitfullscreenchange',onFsChange);
 $('#resumeBtn').addEventListener('click',()=>{requestFS();$('#resume').classList.remove('show')});
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){last=performance.now();if(st.kid)wake()}else{try{speechSynthesis.cancel()}catch(e){}}});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){last=performance.now();if(st.kid)wake();window.NaveVoz&&st.sound&&NaveVoz.suspend(false)}else{hushAll();window.NaveVoz&&NaveVoz.suspend(true)}});
 document.addEventListener('contextmenu',e=>e.preventDefault());
 document.addEventListener('gesturestart',e=>e.preventDefault());
 document.addEventListener('dblclick',e=>e.preventDefault());
@@ -900,10 +904,10 @@ $('#keys').addEventListener('click',e=>{const b=e.target.closest('.k');if(!b)ret
 function openAdult(){$('#aStars').textContent=save.stars;$('#aLvl').textContent=st.level;$('#aSound').textContent=`🔊 Som: ${st.sound?'ligado':'desligado'}`;$('#aVoice').textContent=`🗣️ Voz: ${st.voice?'ligada':'desligada'}`;$('#aReset').dataset.c='';$('#aReset').textContent='🔄 Zerar progresso';
   $('#aPh').hidden=!st.photos.length;$('#aPhotos').innerHTML=st.photos.map((u,i)=>`<a href="${u}" download="maria-clara-foto-${i+1}.jpg"><img src="${u}" alt=""></a>`).join('');$('#adult').classList.add('show')}
 $('#aBack').addEventListener('click',()=>{$('#adult').classList.remove('show');if(st.kid)requestFS()});
-$('#aSound').addEventListener('click',()=>{st.sound=!st.sound;if(!st.sound){musicStop();try{speechSynthesis.cancel()}catch(e){}if(AC)AC.suspend()}else if(AC)AC.resume();openAdult()});
-$('#aVoice').addEventListener('click',()=>{st.voice=!st.voice;if(!st.voice)try{speechSynthesis.cancel()}catch(e){}openAdult()});
+$('#aSound').addEventListener('click',()=>{st.sound=!st.sound;if(!st.sound){musicStop();hushAll();if(AC)AC.suspend();window.NaveVoz&&NaveVoz.suspend(true)}else{if(AC)AC.resume();window.NaveVoz&&NaveVoz.suspend(false)}openAdult()});
+$('#aVoice').addEventListener('click',()=>{st.voice=!st.voice;if(!st.voice)hushAll();openAdult()});
 $('#aReset').addEventListener('click',e=>{const b=e.currentTarget;if(!b.dataset.c){b.dataset.c='1';b.textContent='Toque de novo para confirmar';return}save.stars=0;save.visited={};save.pal=0;persist();st.level=1;updHUD();openAdult()});
-$('#aExit').addEventListener('click',()=>{st.kid=false;$('#adult').classList.remove('show');if(st.music)toggleMusic(true);musicStop();try{speechSynthesis.cancel()}catch(e){}try{wl&&wl.release()}catch(e){}exitFS();$('#bye').classList.add('show');if(isStandalone())setTimeout(()=>{try{window.close()}catch(e){}},600)});
+$('#aExit').addEventListener('click',()=>{st.kid=false;$('#adult').classList.remove('show');if(st.music)toggleMusic(true);musicStop();hushAll();try{wl&&wl.release()}catch(e){}exitFS();$('#bye').classList.add('show');if(isStandalone())setTimeout(()=>{try{window.close()}catch(e){}},600)});
 $('#againBtn').addEventListener('click',()=>{$('#bye').classList.remove('show');enterKid();msg('Oba! Vamos brincar mais!',WORLDS[st.world].face)});
 
 /* ================= início ================= */
@@ -918,7 +922,7 @@ $('#installBox').addEventListener('click',e=>e.stopPropagation());
 $('#installBtn').addEventListener('click',async e=>{e.stopPropagation();if(!deferredInstall)return;try{deferredInstall.prompt();const r=await deferredInstall.userChoice;if(r.outcome==='accepted'){$('#installBtn').hidden=true;$('#installHint').innerHTML='✅ Instalado! Agora abra pelo ícone 🚀 na tela inicial.'}}catch(err){}deferredInstall=null});
 setTimeout(showInstall,2500);
 function start(){if(st.started)return;st.started=true;ac();sfx.fanfare();enterKid();document.body.classList.add('on');$('#start').classList.add('hide');setTimeout(()=>$('#start').classList.remove('show'),700);
-  say('Vamos lá, Maria Clara!');requestAnimationFrame(()=>{layout();enterWorld(st.world);st.hintUntil=st.t+14;st.lastInput=st.t})}
+  say('Vamos lá, Maria Clara!');if(window.NaveVoz)setTimeout(()=>NaveVoz.preload(),8000);requestAnimationFrame(()=>{layout();enterWorld(st.world);st.hintUntil=st.t+14;st.lastInput=st.t})}
 $('#start').addEventListener('click',start);
 $$('#dock .b').forEach(b=>b.addEventListener('pointerdown',e=>{e.preventDefault();if(!st.started)return;const now=performance.now();if(now-(b._t||0)<380)return;b._t=now;b.classList.remove('press');void b.offsetWidth;b.classList.add('press');setTimeout(()=>b.classList.remove('press'),220);ac();sfx.click();st.lastInput=st.t;if(st.warp||st.evolving)return;try{ACTIONS[b.dataset.a]()}catch(err){console.error(err)}}));
 $('#planets').addEventListener('click',e=>{const b=e.target.closest('.pl');if(!b)return;closeMap();warpTo(+b.dataset.w)});

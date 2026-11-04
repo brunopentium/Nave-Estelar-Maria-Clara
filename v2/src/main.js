@@ -84,7 +84,7 @@ function updProps(dt) {
 }
 const count = tag => PR.filter(p => p.tag === tag && !p.dead).length;
 function popAt(pos, color) { sparks.burst(pos.x, pos.y, pos.z, 26, color, 3.2); G.fx.ring(pos, color); sfx.pop(); }
-G.sfx = sfx;
+G.sfx = sfx; A.onDur = d => { st.talkUntil = st.t + d + .1; };
 G.fx = {
   ring(p, c = '#ffffff') { const m = new THREE.Mesh(new THREE.TorusGeometry(1, .035, 8, 48), new THREE.MeshBasicMaterial({ color: new THREE.Color(c).multiplyScalar(2), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })); m.position.copy(p); m.position.y += .05; m.rotation.x = -Math.PI / 2; m.scale.setScalar(.1);
     addProp(m, { life: .7, fadeOut: false, upd: (q) => { const k = q.t / .7; m.scale.setScalar(.1 + k * 1.6); m.material.opacity = 1 - k; } }); },
@@ -433,7 +433,7 @@ setTimeout(showInstall, 2500);
 
 /* ---------- início ---------- */
 function start() { if (st.started) return; st.started = true; ac(); sfx.fanfare(); enterKid(); document.body.classList.add('on'); $('#start').classList.add('hide'); setTimeout(() => $('#start').classList.remove('show'), 700);
-  say('Vamos lá, Maria Clara!'); requestAnimationFrame(() => { layout(); enterWorld(st.world); ambientPad(true, A.key); st.lastInput = st.t; }); }
+  say('Vamos lá, Maria Clara!'); if (window.NaveVoz) setTimeout(() => window.NaveVoz.preload(), 8000); requestAnimationFrame(() => { layout(); enterWorld(st.world); ambientPad(true, A.key); st.lastInput = st.t; }); }
 $('#start').addEventListener('click', start);
 $$('#dock .b').forEach(b => b.addEventListener('pointerdown', e => { e.preventDefault(); if (!st.started) return; const now = performance.now(); if (now - (b._t || 0) < 380) return; b._t = now; b.classList.remove('press'); void b.offsetWidth; b.classList.add('press'); setTimeout(() => b.classList.remove('press'), 220); ac(); sfx.click(); st.lastInput = st.t; if (st.warp || st.evolving) return; try { ACTIONS[b.dataset.a](); } catch (err) { console.error(err); } }));
 $('#planets').addEventListener('click', e => { const b = e.target.closest('.pl'); if (!b) return; $('#map').classList.remove('show'); warpTo(+b.dataset.w); });

@@ -1,5 +1,5 @@
 // Som sintetizado com reverb, música e voz
-export const A = { sound: true, voice: true, key: 1, onLater: null };
+export const A = { sound: true, voice: true, key: 1, onLater: null, onDur: null };
 let AC = null, MG = null, NB = null, REV = null, AMB = null;
 export function ac() {
   if (!A.sound) return null;
@@ -72,13 +72,19 @@ export function ambientPad(on, key = 1) {
   const o = [196 * key, 246.9 * key, 293.7 * key, 392 * key].map((f, i) => { const os = a.createOscillator(); os.type = 'sine'; os.frequency.value = f; const lfo = a.createOscillator(), lg = a.createGain(); lfo.frequency.value = .07 + i * .03; lg.gain.value = f * .004; lfo.connect(lg); lg.connect(os.frequency); lfo.start(); os.connect(g); os.start(); return os; });
   g.gain.setTargetAtTime(.022, a.currentTime, 2); AMB = { g, o };
 }
-export function suspendAll(on) { if (!AC) return; on ? AC.suspend() : AC.resume(); }
+export function suspendAll(on) { if (window.NaveVoz) window.NaveVoz.suspend(on); if (!AC) return; on ? AC.suspend() : AC.resume(); }
 
 let ptVoice = null;
 function loadVoices() { try { const v = speechSynthesis.getVoices(); ptVoice = v.find(x => /pt[-_]BR/i.test(x.lang) && /female|luciana|francisca|vitoria|google/i.test(x.name)) || v.find(x => /pt[-_]BR/i.test(x.lang)) || v.find(x => /^pt/i.test(x.lang)) || null; } catch (e) { } }
 if ('speechSynthesis' in window) { loadVoices(); speechSynthesis.onvoiceschanged = loadVoices; }
 export function say(text) {
+  if (!A.voice || !A.sound) return; const NV = window.NaveVoz;
+  if (NV && NV.say(text, d => A.onDur && A.onDur(d))) { try { speechSynthesis.cancel(); } catch (e) { } return; }
+  ttsSay(text);
+}
+if (window.NaveVoz) window.NaveVoz.fallback = t => ttsSay(t);
+function ttsSay(text) {
   if (!A.voice || !A.sound || !('speechSynthesis' in window)) return;
   try { speechSynthesis.cancel(); const clean = text.replace(/\p{Extended_Pictographic}|️/gu, '').trim(); if (!clean) return; const u = new SpeechSynthesisUtterance(clean); u.lang = 'pt-BR'; u.rate = .98; u.pitch = 1.25; if (ptVoice) u.voice = ptVoice; speechSynthesis.speak(u); } catch (e) { }
 }
-export function hush() { try { speechSynthesis.cancel(); } catch (e) { } }
+export function hush() { try { speechSynthesis.cancel(); } catch (e) { } if (window.NaveVoz) window.NaveVoz.hush(); }
